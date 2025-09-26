@@ -207,7 +207,8 @@ const GetUserInfo = () => {
             </Text>
             <Input className='w-full max-w-xs p-3 mt-4 text-lg text-center text-white bg-neutral-800 border border-neutral-700 rounded-lg placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500'>
               <InputField
-                className='text-white text-center'
+                autoFocus
+                className='text-white text-center h-10'
                 placeholder={steps[currentStep].placeholder}
               />
             </Input>
@@ -216,12 +217,22 @@ const GetUserInfo = () => {
       </Box>
 
       {/* bottom navigation */}
-      <Box className='w-full max-w-md space-y-2'>
+      <Box className='w-full max-w-md flex flex-row items-center justify-end gap-4'>
+        {currentStep > 0 && (
+          <Button
+            onPress={() => setCurrentStep(currentStep => currentStep - 1)}
+            className='max-w-13 text-white text-center flex items-center justify-center px-6 py-3 space-x-2 font-semibold text-white rounded-full hover:bg-blue-700 disabled:bg-neutral-600 disabled:cursor-not-allowed transition'
+          >
+            <ChevronLeftIcon className='w-4 h-4' />
+          </Button>
+        )}
         <Button
+          disabled={currentStep === totalSteps - 1}
           onPress={() => setCurrentStep(currentStep => currentStep + 1)}
-          className='w-full bg-blue-500 text-white'
+          className='max-w-[10rem] text-white text-center flex items-center justify-center px-6 py-3 space-x-2 font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 disabled:bg-neutral-600 disabled:cursor-not-allowed transition'
         >
           Next
+          <ChevronRightIcon className='w-4 h-4' />
         </Button>
       </Box>
     </Box>
