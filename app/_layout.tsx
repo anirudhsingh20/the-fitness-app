@@ -1,12 +1,10 @@
-import { Stack } from "expo-router";
-
-import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
-import '@/global.css';
+import { Stack } from 'expo-router';
+import { ReduxProvider } from '@/lib/providers/ReduxProvider';
 
 export default function RootLayout() {
   return (
-    <GluestackUIProvider>
-      <Stack />
-    </GluestackUIProvider>
+    <ReduxProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </ReduxProvider>
   );
 }

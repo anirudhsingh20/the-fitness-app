@@ -1,8 +1,18 @@
 import { Box } from '@/components/ui/box';
 import { Button } from '@/components/ui/button';
+import { Input, InputField } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { useState } from 'react';
-import { Input, InputField } from '@/components/ui/input';
+import {
+  Radio,
+  RadioGroup,
+  RadioIcon,
+  RadioIndicator,
+  RadioLabel,
+} from '@/components/ui/radio';
+import { useFormik } from 'formik';
+import { userInfoValidationSchema } from '@/lib/validation/userInfoSchema';
+import { useUser } from '@/lib/hooks/useUser';
 
 const UserIcon = (props: any) => (
   <svg
@@ -88,6 +98,22 @@ const WeightIcon = (props: any) => (
   </svg>
 );
 
+const StrengthIcon = (props: any) => (
+  <svg
+    xmlns='http://www.w3.org/2000/svg'
+    width={props.size || 48}
+    height={props.size || 48}
+    viewBox='0 0 24 24'
+    fill='none'
+    stroke='currentColor'
+    strokeWidth='2'
+    strokeLinecap='round'
+    strokeLinejoin='round'
+  >
+    <path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' />
+  </svg>
+);
+
 const CheckIcon = (props: any) => (
   <svg
     xmlns='http://www.w3.org/2000/svg'
@@ -137,6 +163,22 @@ const ChevronRightIcon = (props: any) => (
   </svg>
 );
 
+const GoalIcon = (props: any) => (
+  <svg
+    xmlns='http://www.w3.org/2000/svg'
+    width={props.size || 48}
+    height={props.size || 48}
+    viewBox='0 0 24 24'
+    fill='none'
+    stroke='currentColor'
+    strokeWidth='2'
+    strokeLinecap='round'
+    strokeLinejoin='round'
+  >
+    <path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' />
+  </svg>
+);
+
 // Form steps configuration
 const steps = [
   {
@@ -171,11 +213,77 @@ const steps = [
     type: 'number',
     icon: WeightIcon,
   },
+  {
+    title: 'Your strength level',
+    question: 'What is your strength level?',
+    key: 'strengthLevel',
+    placeholder: 'Select your strength level',
+    type: 'radio',
+    options: ['Beginner', 'Intermediate', 'Advanced'],
+    icon: StrengthIcon,
+  },
+  {
+    title: 'Your goal',
+    question: 'What is your goal?',
+    key: 'goal',
+    placeholder: 'Select your goal',
+    type: 'radio',
+    options: ['Lose weight', 'Gain muscle', 'Maintain weight'],
+    icon: GoalIcon,
+  },
 ];
 
 const GetUserInfo = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const totalSteps = steps.length;
+  const { updateUserInfo, finishOnboarding } = useUser();
+
+  const formik = useFormik({
+    initialValues: {
+      name: '',
+      age: '',
+      height: '',
+      weight: '',
+      strengthLevel: '',
+      goal: '',
+    },
+    validationSchema: userInfoValidationSchema,
+    validateOnChange: true,
+    validateOnBlur: true,
+    onSubmit: values => {
+      // Convert string values to numbers where needed
+      updateUserInfo({
+        name: values.name,
+        age: Number(values.age),
+        height: Number(values.height),
+        weight: Number(values.weight),
+        strengthLevel: values.strengthLevel as
+          | 'Beginner'
+          | 'Intermediate'
+          | 'Advanced',
+        goal: values.goal as 'Lose weight' | 'Gain muscle' | 'Maintain weight',
+      });
+      finishOnboarding();
+      // Navigate to next screen or show success
+    },
+  });
+
+  const handleNext = async () => {
+    const currentKey = steps[currentStep].key;
+
+    // Validate current field
+    const fieldError = await formik.validateForm();
+    formik.setTouched({ ...formik.touched, [currentKey]: true });
+
+    if (!fieldError?.[currentKey as keyof typeof fieldError]) {
+      if (currentStep < totalSteps - 1) {
+        setCurrentStep(currentStep + 1);
+      } else {
+        formik.handleSubmit();
+        setCurrentStep(currentStep + 1);
+      }
+    }
+  };
 
   return (
     <Box className='flex flex-col items-center h-screen justify-between p-5 bg-neutral-900 font-sans'>
@@ -205,13 +313,135 @@ const GetUserInfo = () => {
             <Text className='text-center text-gray-400'>
               {steps[currentStep].question}
             </Text>
-            <Input className='w-full max-w-xs p-3 mt-4 text-lg text-center text-white bg-neutral-800 border border-neutral-700 rounded-lg placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500'>
-              <InputField
-                autoFocus
-                className='text-white text-center h-10'
-                placeholder={steps[currentStep].placeholder}
-              />
-            </Input>
+            {steps[currentStep].type !== 'radio' && (
+              <>
+                <Input
+                  key={`${steps[currentStep].key}-input`}
+                  className='w-full max-w-xs p-3 mt-4 text-lg text-center text-white bg-neutral-800 border border-neutral-700 rounded-lg placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                >
+                  <InputField
+                    id={steps[currentStep].key}
+                    value={
+                      formik.values[
+                        steps[currentStep].key as keyof typeof formik.values
+                      ]
+                    }
+                    onChangeText={(text: string) => {
+                      const isNumber = steps[currentStep].type === 'number';
+                      if (isNumber) {
+                        text = text.replace(/[^0-9.]/g, '');
+                      }
+                      formik.setFieldValue(steps[currentStep].key, text);
+                    }}
+                    placeholder={steps[currentStep].placeholder}
+                    className='text-white text-center h-10'
+                    keyboardType={
+                      steps[currentStep].type === 'number'
+                        ? 'numeric'
+                        : 'default'
+                    }
+                    onSubmitEditing={handleNext}
+                    autoFocus
+                  />
+                </Input>
+                {formik.touched[
+                  steps[currentStep].key as keyof typeof formik.touched
+                ] &&
+                  formik.errors[
+                    steps[currentStep].key as keyof typeof formik.errors
+                  ] && (
+                    <Text className='text-red-400 text-sm mt-2'>
+                      {
+                        formik.errors[
+                          steps[currentStep].key as keyof typeof formik.errors
+                        ]
+                      }
+                    </Text>
+                  )}
+              </>
+            )}
+
+            {steps[currentStep].type === 'radio' && (
+              <>
+                <Box className='w-full max-w-xs p-3 mt-4 text-lg text-center text-white bg-neutral-800 border border-neutral-700 rounded-lg placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500'>
+                  <RadioGroup
+                    id={steps[currentStep].key}
+                    value={
+                      formik.values[
+                        steps[currentStep].key as keyof typeof formik.values
+                      ]
+                    }
+                    onChange={(value: string) =>
+                      formik.setFieldValue(steps[currentStep].key, value)
+                    }
+                  >
+                    {steps?.[currentStep]?.options?.map((option: string) => (
+                      <Radio key={option} value={option}>
+                        <RadioIndicator className='data-[checked=true]:bg-blue-500'>
+                          <RadioIcon as={CheckIcon} />
+                        </RadioIndicator>
+                        <RadioLabel className='text-white data-[checked=true]:text-blue-500'>
+                          {option}
+                        </RadioLabel>
+                      </Radio>
+                    ))}
+                  </RadioGroup>
+                </Box>
+                {formik.touched[
+                  steps[currentStep].key as keyof typeof formik.touched
+                ] &&
+                  formik.errors[
+                    steps[currentStep].key as keyof typeof formik.errors
+                  ] && (
+                    <Text className='text-red-400 text-sm mt-2'>
+                      {
+                        formik.errors[
+                          steps[currentStep].key as keyof typeof formik.errors
+                        ]
+                      }
+                    </Text>
+                  )}
+              </>
+            )}
+          </Box>
+        )}
+
+        {currentStep === totalSteps && (
+          <Box className='w-full max-w-md space-y-4 text-center flex flex-col items-center justify-center'>
+            <CheckIcon className='text-blue-400' />
+            <Text className='text-2xl font-bold text-center text-white'>
+              You are all set!
+            </Text>
+            <Box className='w-full max-w-xs p-3 mt-4 text-lg text-center text-white bg-neutral-800 border border-neutral-700 rounded-lg'>
+              <Text className='text-white text-center'>
+                Name: {formik.values.name}
+              </Text>
+            </Box>
+            <Box className='w-full max-w-xs p-3 mt-4 text-lg text-center text-white bg-neutral-800 border border-neutral-700 rounded-lg'>
+              <Text className='text-white text-center'>
+                Age: {formik.values.age}
+              </Text>
+            </Box>
+            <Box className='w-full max-w-xs p-3 mt-4 text-lg text-center text-white bg-neutral-800 border border-neutral-700 rounded-lg'>
+              <Text className='text-white text-center'>
+                Height: {formik.values.height} cm
+              </Text>
+            </Box>
+            <Box className='w-full max-w-xs p-3 mt-4 text-lg text-center text-white bg-neutral-800 border border-neutral-700 rounded-lg'>
+              <Text className='text-white text-center'>
+                Weight: {formik.values.weight} kg
+              </Text>
+            </Box>
+            <Box className='w-full max-w-xs p-3 mt-4 text-lg text-center text-white bg-neutral-800 border border-neutral-700 rounded-lg'>
+              <Text className='text-white text-center'>
+                Strength: {formik.values.strengthLevel}
+              </Text>
+            </Box>
+            <Box className='w-full max-w-xs p-3 mt-4 text-lg text-center text-white bg-neutral-800 border border-neutral-700 rounded-lg'>
+              <Text className='text-white text-center'>
+                Goal: {formik.values.goal}
+              </Text>
+            </Box>
           </Box>
         )}
       </Box>
@@ -227,11 +457,11 @@ const GetUserInfo = () => {
           </Button>
         )}
         <Button
-          disabled={currentStep === totalSteps - 1}
-          onPress={() => setCurrentStep(currentStep => currentStep + 1)}
+          disabled={currentStep === totalSteps}
+          onPress={handleNext}
           className='max-w-[10rem] text-white text-center flex items-center justify-center px-6 py-3 space-x-2 font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 disabled:bg-neutral-600 disabled:cursor-not-allowed transition'
         >
-          Next
+          {currentStep === totalSteps - 1 ? 'Complete' : 'Next'}
           <ChevronRightIcon className='w-4 h-4' />
         </Button>
       </Box>
